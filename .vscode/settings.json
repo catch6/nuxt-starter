@@ -58,7 +58,6 @@
     ".env.*": "properties",
     ".prettierrc": "json",
     ".stylelintrc": "json"
-  },
-  "github.copilot.chat.localeOverride": "zh-CN",
-  "files.autoSave": "off"
+  }
+
 }

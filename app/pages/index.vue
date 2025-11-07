@@ -4,6 +4,8 @@
 
 <template>
   <div>
-    <Button>Click me</Button>
+    <Button class="before:text-2xl hover:text-6xl text-5xl ">
+      Click me
+    </Button>
   </div>
 </template>

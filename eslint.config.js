@@ -4,11 +4,6 @@ export default antfu({
   formatters: true,
   vue: true,
 }, {
-  settings: {
-    'better-tailwindcss': {
-      entryPoint: 'app/assets/css/tailwind.css',
-    },
-  },
   ignores: [
     '.nuxt/**',
     '.vscode/**',

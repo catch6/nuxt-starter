@@ -8,7 +8,9 @@
       "@": ["./app"],
       "@/*": ["./app/*"]
     },
-    "types": []
+    "types": [
+      "@nuxt/types"
+    ]
   },
   "references": [
     {

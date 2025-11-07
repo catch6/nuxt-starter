@@ -58,6 +58,9 @@
     ".env.*": "properties",
     ".prettierrc": "json",
     ".stylelintrc": "json"
-  }
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  "editor.gotoLocation.multipleDefinitions": "goto"
 
 }

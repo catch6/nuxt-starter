@@ -35,18 +35,41 @@ const patchData = async () => {
   clientPatchData.value = data
 }
 
-const downloadProgress = ref()
-const downloadLoaded = ref()
-const downloadTotal = ref()
 const downloadData = async () => {
   await api.client.download('/test/download', { name: 'client download' }, {
-    onProgress: async (progress: number, loaded: number, total: number) => {
-      downloadProgress.value = progress
-      downloadLoaded.value = loaded
-      downloadTotal.value = total
-    },
     filename: '你好 01.txt',
   })
+}
+
+const uploadProgress = ref(0)
+const uploadLoaded = ref(0)
+const uploadTotal = ref(0)
+const selectedFile = ref<File | null>(null)
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  selectedFile.value = target.files?.[0] || null
+}
+const uploadData = async () => {
+  if (!selectedFile.value) {
+    return
+  }
+  try {
+    await api.client.upload('/test/upload', { file: selectedFile.value, name: 'client upload' }, {
+      onProgress: (progress: number, loaded: number, total: number) => {
+        uploadProgress.value = progress
+        uploadLoaded.value = loaded
+        uploadTotal.value = total
+      },
+    })
+    selectedFile.value = null
+    // 重置文件输入
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    if (fileInput)
+      fileInput.value = ''
+  }
+  catch (error) {
+    console.error('上传失败:', error)
+  }
 }
 </script>
 
@@ -90,7 +113,13 @@ const downloadData = async () => {
       </div>
       <div>
         <span @click="downloadData">
-          clientDownloadData: {{ downloadProgress }}/{{ downloadLoaded }}/{{ downloadTotal }}
+          clientDownloadData
+        </span>
+      </div>
+      <div>
+        <input type="file" @change="handleFileChange" />
+        <span @click="uploadData">
+          clientUploadData: {{ `${uploadProgress}/${uploadLoaded}/${uploadTotal}` }}
         </span>
       </div>
     </div>

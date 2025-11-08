@@ -176,7 +176,7 @@ class ClientRequest {
     url: string,
     file: File | File[] | { file: File | File[], [key: string]: any },
     config?: NitroFetchOptions<any> & {
-      onProgress?: (progress: number, loaded: number, total: number) => Promise<void>
+      onProgress?: (progress: number, loaded: number, total: number) => void
       fieldName?: string // 文件字段名，默认 'file'
     },
   ) {
@@ -261,82 +261,20 @@ class ClientRequest {
    * 文件下载
    * @param url 下载地址
    * @param data 查询参数
-   * @param onProgress 下载进度回调
    * @param filename 下载文件名
    */
   async download(
     url: string,
     data?: any,
     config?: Partial<NitroFetchOptions<any>> & {
-      onProgress?: (progress: number, loaded: number, total: number) => Promise<void>
       filename?: string
     },
   ) {
-    const tokenStore = useTokenStore()
-    const runtimeConfig = useRuntimeConfig()
-
-    // 使用 XMLHttpRequest 实现进度跟踪
-    if (config?.onProgress) {
-      // 构建完整 URL
-      const fullUrl = new URL(`${runtimeConfig.public.apiBase}${url}`)
-      if (data) {
-        Object.keys(data).forEach((key) => {
-          fullUrl.searchParams.append(key, data[key])
-        })
-      }
-      return new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.responseType = 'blob'
-
-        xhr.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100)
-            config.onProgress?.(progress, e.loaded, e.total)
-          }
-        })
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const blob = xhr.response
-            this.downloadBlob(blob, config?.filename)
-            resolve()
-          }
-          else {
-            reject(new Error(`下载失败: HTTP ${xhr.status}`))
-          }
-        })
-
-        xhr.addEventListener('error', () => {
-          reject(new Error('网络错误'))
-        })
-
-        xhr.addEventListener('abort', () => {
-          reject(new Error('下载已取消'))
-        })
-
-        xhr.open('GET', fullUrl.toString())
-
-        if (tokenStore.token) {
-          xhr.setRequestHeader('Authorization', `Bearer ${tokenStore.token}`)
-        }
-
-        xhr.send()
-      })
-    }
-    // 不需要进度时使用 $fetch
-    const rawResponse: any = await $fetch.raw(url, {
-      method: 'GET',
-      baseURL: runtimeConfig.public.apiBase,
-      headers: {
-        ...(tokenStore.token ? { Authorization: `Bearer ${tokenStore.token}` } : {}),
-        ...(config?.headers as Record<string, string>),
-      },
-      params: data,
+    const response: any = await this.request<Blob>('GET', url, data, {
       responseType: 'blob',
-      ...(config as any),
+      ...config,
     })
-    const blob = rawResponse._data as Blob
-    this.downloadBlob(blob, config?.filename)
+    this.downloadBlob(response, config?.filename)
   }
 
   /**
@@ -350,12 +288,9 @@ class ClientRequest {
     link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    setTimeout(() => {
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    }, 100)
-    // document.body.removeChild(link)
-    // URL.revokeObjectURL(url)
+    document.body.removeChild(link)
+    // 延迟 revoke，确保下载已开始
+    setTimeout(() => URL.revokeObjectURL(url), 100)
   }
 }
 

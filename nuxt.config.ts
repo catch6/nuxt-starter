@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_API_BASE
-      apiBase: '',
+      apiBase: 'http://192.168.1.181:10501/api',
     },
   },
   routeRules: {

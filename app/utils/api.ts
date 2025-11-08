@@ -11,13 +11,6 @@ interface ApiResponse<T = any> {
 
 //  SSR 请求
 class ServerRequest {
-  private baseURL: string
-
-  constructor() {
-    const config = useRuntimeConfig()
-    this.baseURL = config.public.apiBase
-  }
-
   private request<T = any>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     url: string,
@@ -25,11 +18,12 @@ class ServerRequest {
     config?: UseFetchOptions<ApiResponse<T>>,
   ) {
     const tokenStore = useTokenStore()
+    const runtimeConfig = useRuntimeConfig()
 
     // 合并配置
     const options: UseFetchOptions<ApiResponse<T>> = {
       method,
-      baseURL: this.baseURL,
+      baseURL: runtimeConfig.public.apiBase,
       key: `${method}-${url}-${JSON.stringify(data)}`,
       // 默认配置
       headers: {
@@ -95,13 +89,6 @@ class ServerRequest {
 }
 
 class ClientRequest {
-  private baseURL: string
-
-  constructor() {
-    const config = useRuntimeConfig()
-    this.baseURL = config.public.apiBase
-  }
-
   private request<T = any>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     url: string,
@@ -109,11 +96,12 @@ class ClientRequest {
     config?: NitroFetchOptions<any>,
   ) {
     const tokenStore = useTokenStore()
+    const runtimeConfig = useRuntimeConfig()
 
     // 合并配置
     const options: NitroFetchOptions<any> = {
       method,
-      baseURL: this.baseURL,
+      baseURL: runtimeConfig.public.apiBase,
       // 默认配置
       headers: {
         'Content-Type': 'application/json',
@@ -188,7 +176,7 @@ class ClientRequest {
     url: string,
     file: File | File[] | { file: File | File[], [key: string]: any },
     config?: NitroFetchOptions<any> & {
-      onProgress?: (progress: number, loaded: number, total: number) => void
+      onProgress?: (progress: number, loaded: number, total: number) => Promise<void>
       fieldName?: string // 文件字段名，默认 'file'
     },
   ) {
@@ -223,6 +211,7 @@ class ClientRequest {
     // 使用 XMLHttpRequest 实现进度跟踪
     if (config?.onProgress) {
       const tokenStore = useTokenStore()
+      const runtimeConfig = useRuntimeConfig()
 
       return new Promise<ApiResponse<T>>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
@@ -254,7 +243,7 @@ class ClientRequest {
           reject(new Error('网络错误'))
         })
 
-        xhr.open('POST', `${this.baseURL}${url}`)
+        xhr.open('POST', `${runtimeConfig.public.apiBase}${url}`)
 
         if (tokenStore.token) {
           xhr.setRequestHeader('Authorization', `Bearer ${tokenStore.token}`)
@@ -279,16 +268,17 @@ class ClientRequest {
     url: string,
     data?: any,
     config?: Partial<NitroFetchOptions<any>> & {
-      onProgress?: (progress: number, loaded: number, total: number) => void
+      onProgress?: (progress: number, loaded: number, total: number) => Promise<void>
       filename?: string
     },
   ) {
     const tokenStore = useTokenStore()
+    const runtimeConfig = useRuntimeConfig()
 
     // 使用 XMLHttpRequest 实现进度跟踪
     if (config?.onProgress) {
       // 构建完整 URL
-      const fullUrl = new URL(url, this.baseURL)
+      const fullUrl = new URL(`${runtimeConfig.public.apiBase}${url}`)
       if (data) {
         Object.keys(data).forEach((key) => {
           fullUrl.searchParams.append(key, data[key])
@@ -308,16 +298,20 @@ class ClientRequest {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             const blob = xhr.response
-            this.downloadBlob(blob, config?.filename || this.getFilename(xhr.getResponseHeader('content-disposition')))
+            this.downloadBlob(blob, config?.filename)
             resolve()
           }
           else {
-            reject(new Error(`下载失败: ${xhr.status}`))
+            reject(new Error(`下载失败: HTTP ${xhr.status}`))
           }
         })
 
         xhr.addEventListener('error', () => {
           reject(new Error('网络错误'))
+        })
+
+        xhr.addEventListener('abort', () => {
+          reject(new Error('下载已取消'))
         })
 
         xhr.open('GET', fullUrl.toString())
@@ -330,63 +324,38 @@ class ClientRequest {
       })
     }
     // 不需要进度时使用 $fetch
-    const response: any = await this.request('GET', url, data, config)
-    const blob = await response.blob()
-    this.downloadBlob(blob, config?.filename || this.getFilename(response.headers.get('content-disposition')))
-  }
-
-  /**
-   * 获取文件名
-   */
-  private getFilename(disposition?: string | null): string {
-    if (disposition) {
-      // 优先处理 RFC 5987 标准格式 filename*=UTF-8''encoded_filename
-      const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i)
-      if (encodedMatch && encodedMatch[1]) {
-        return decodeURIComponent(encodedMatch[1])
-      }
-
-      // 如果没找到 filename*，则尝试处理旧格式 filename="filename"
-      const filenameMatch = disposition.match(/filename="?([^;"]*)"?/i)
-      if (filenameMatch && filenameMatch[1]) {
-        return filenameMatch[1]
-      }
-    }
-    // 如果都没找到，返回一个默认的文件名 download_yyyyMMddHHmmss
-    return `导出_${this.datetime()}`
-  }
-
-  /**
-   * 获取时间戳
-   */
-  private datetime(): string {
-    return new Date()
-      .toLocaleString('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        hour12: false,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-      .replace(/[/: ]/g, '')
+    const rawResponse: any = await $fetch.raw(url, {
+      method: 'GET',
+      baseURL: runtimeConfig.public.apiBase,
+      headers: {
+        ...(tokenStore.token ? { Authorization: `Bearer ${tokenStore.token}` } : {}),
+        ...(config?.headers as Record<string, string>),
+      },
+      params: data,
+      responseType: 'blob',
+      ...(config as any),
+    })
+    const blob = rawResponse._data as Blob
+    this.downloadBlob(blob, config?.filename)
   }
 
   /**
    * 通过 Blob 触发浏览器下载
    */
-  private downloadBlob(blob: Blob, filename: string) {
+  private downloadBlob(blob: Blob, filename?: string) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = filename
+    link.download = filename || ''
     link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    setTimeout(() => {
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }, 100)
+    // document.body.removeChild(link)
+    // URL.revokeObjectURL(url)
   }
 }
 

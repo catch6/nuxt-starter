@@ -1,6 +1,6 @@
 export const useTokenStore = defineStore('token', {
   state: () => {
-    const token = ref('')
+    const token = ref('abc')
     return { token }
   },
   actions: {

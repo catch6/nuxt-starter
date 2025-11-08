@@ -59,8 +59,8 @@
     ".prettierrc": "json",
     ".stylelintrc": "json"
   },
-  "typescript.tsdk": "node_modules/typescript/lib",
-
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
   "editor.gotoLocation.multipleDefinitions": "goto"
-
 }

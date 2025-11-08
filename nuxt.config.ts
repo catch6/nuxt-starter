@@ -4,11 +4,40 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  telemetry: false,
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_API_BASE
       apiBase: '',
     },
+  },
+  routeRules: {
+    '/': { prerender: true },
+  },
+  imports: {
+    dirs: ['~/lib'],
+    presets: [
+      {
+        from: 'vue-sonner',
+        imports: ['toast'],
+      },
+    ],
+  },
+  modules: [
+    '@nuxt/icon',
+    '@nuxt/image',
+    '@pinia/nuxt',
+    'pinia-plugin-persistedstate/nuxt',
+    '@vueuse/nuxt',
+    'shadcn-nuxt',
+  ],
+  icon: {
+    mode: 'svg',
+    size: '1.5rem',
+    serverBundle: {
+      collections: ['lucide'],
+    },
+    localApiEndpoint: '/_nuxt_icon',
   },
   css: ['~/assets/css/tailwind.css'],
   vite: {
@@ -16,13 +45,11 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
-  modules: [
-    '@nuxt/image',
-    'shadcn-nuxt',
-    '@vueuse/nuxt',
-    '@pinia/nuxt',
-    'pinia-plugin-persistedstate/nuxt',
-  ],
+  piniaPluginPersistedstate: {
+    cookieOptions: {
+      maxAge: 2592000,
+    },
+  },
   shadcn: {
     prefix: '',
     componentDir: '~/components/ui',

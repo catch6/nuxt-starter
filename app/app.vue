@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" setup>
 import 'vue-sonner/style.css'
 </script>
 

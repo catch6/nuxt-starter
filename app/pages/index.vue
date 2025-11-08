@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { toast } from 'vue-sonner'
 </script>
 
 <template>

@@ -2,8 +2,6 @@ import type { NitroFetchOptions } from 'nitropack'
 import type { UseFetchOptions } from 'nuxt/app'
 import { toast } from 'vue-sonner'
 
-type RequestConfig = UseFetchOptions<any> | NitroFetchOptions<any>
-
 // API 响应类型定义
 interface ApiResponse<T = any> {
   code: number

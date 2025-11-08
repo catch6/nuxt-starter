@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-
+import { ConfigProvider } from 'reka-ui'
 </script>
 
 <template>
-  <div>
+  <ConfigProvider locale="zh-CN">
     <slot />
-  </div>
+  </ConfigProvider>
 </template>
